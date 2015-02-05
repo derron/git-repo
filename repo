@@ -4,7 +4,8 @@
 ##
 #REPO_URL = 'https://gerrit.googlesource.com/git-repo'
 REPO_URL = 'https://github.com/derron/git-repo.git'
-REPO_REV = 'stable'
+#REPO_REV = 'stable'
+REPO_REV = 'master'
 
 # Copyright (C) 2008 Google Inc.
 #
