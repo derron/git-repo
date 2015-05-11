@@ -809,7 +809,7 @@ class Project(object):
     out = StatusColoring(self.config)
     if not output_redir == None:
       out.redirect(output_redir)
-    out.project('project %-40s', self.relpath + '/')
+    out.project('project %-40s', self.relpath + '/ ')
 
     branch = self.CurrentBranch
     if branch is None:
@@ -1326,6 +1326,8 @@ class Project(object):
     if not ID_RE.match(self.revisionExpr):
       # in case of manifest sync the revisionExpr might be a SHA1
       branch.merge = self.revisionExpr
+      if not branch.merge.startswith('refs/'):
+        branch.merge = R_HEADS + branch.merge
     branch.Save()
 
     if cnt_mine > 0 and self.rebase:
@@ -1394,6 +1396,8 @@ class Project(object):
     branch = self.GetBranch(name)
     branch.remote = self.GetRemote(self.remote.name)
     branch.merge = self.revisionExpr
+    if not branch.merge.startswith('refs/'):
+      branch.merge = R_HEADS + self.revisionExpr
     revid = self.GetRevisionId(all_refs)
 
     if head.startswith(R_HEADS):
@@ -1749,6 +1753,9 @@ class Project(object):
         depth = self.clone_depth
       else:
         depth = self.manifest.manifestProject.config.GetString('repo.depth')
+      # The repo project should never be synced with partial depth
+      if self.relpath == '.repo/repo':
+        depth = None
 
     if depth:
       current_branch_only = True
@@ -1846,23 +1853,25 @@ class Project(object):
       spec.append('tag')
       spec.append(tag_name)
 
-    branch = self.revisionExpr
-    if is_sha1 and depth:
-      # Shallow checkout of a specific commit, fetch from that commit and not
-      # the heads only as the commit might be deeper in the history.
-      spec.append(branch)
-    else:
-      if is_sha1:
-        branch = self.upstream
-      if branch is not None and branch.strip():
-        if not branch.startswith('refs/'):
-          branch = R_HEADS + branch
-        spec.append(str((u'+%s:' % branch) + remote.ToLocal(branch)))
+    if not self.manifest.IsMirror:
+      branch = self.revisionExpr
+      if is_sha1 and depth:
+        # Shallow checkout of a specific commit, fetch from that commit and not
+        # the heads only as the commit might be deeper in the history.
+        spec.append(branch)
+      else:
+        if is_sha1:
+          branch = self.upstream
+        if branch is not None and branch.strip():
+          if not branch.startswith('refs/'):
+            branch = R_HEADS + branch
+          spec.append(str((u'+%s:' % branch) + remote.ToLocal(branch)))
     cmd.extend(spec)
 
     shallowfetch = self.config.GetString('repo.shallowfetch')
     if shallowfetch and shallowfetch != ' '.join(spec):
-      GitCommand(self, ['fetch', '--unshallow', name] + shallowfetch.split(),
+      GitCommand(self, ['fetch', '--depth=2147483647', name]
+                 + shallowfetch.split(),
                  bare=True, ssh_proxy=ssh_proxy).Wait()
     if depth:
       self.config.SetString('repo.shallowfetch', ' '.join(spec))
@@ -1871,10 +1880,21 @@ class Project(object):
 
     ok = False
     for _i in range(2):
-      ret = GitCommand(self, cmd, bare=True, ssh_proxy=ssh_proxy).Wait()
+      gitcmd = GitCommand(self, cmd, bare=True, ssh_proxy=ssh_proxy)
+      ret = gitcmd.Wait()
       if ret == 0:
         ok = True
         break
+      # If needed, run the 'git remote prune' the first time through the loop
+      elif (not _i and
+            "error:" in gitcmd.stderr and
+            "git remote prune" in gitcmd.stderr):
+        prunecmd = GitCommand(self, ['remote', 'prune', name], bare=True,
+                              ssh_proxy=ssh_proxy)
+        ret = prunecmd.Wait()
+        if ret:
+          break
+        continue
       elif current_branch_only and is_sha1 and ret == 128:
         # Exit code 128 means "couldn't find the ref you asked for"; if we're in sha1
         # mode, we just tried sync'ing from the upstream field; it doesn't exist, thus
