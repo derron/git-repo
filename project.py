@@ -2160,11 +2160,7 @@ class Project(object):
       if os.path.islink(dst):
         continue
       if os.path.exists(dst):
-        if filecmp.cmp(stock_hook, dst, shallow=False):
-          os.remove(dst)
-        else:
-          _error("%s: Not replacing %s hook", self.relpath, name)
-          continue
+        os.remove(dst)
       try:
         os.symlink(os.path.relpath(stock_hook, os.path.dirname(dst)), dst)
       except OSError as e:
