@@ -264,10 +264,10 @@ def _Init(args):
     dst = os.path.abspath(os.path.join(repodir, S_repo))
     _Clone(url, dst, opt.quiet)
 
-    #if can_verify and not opt.no_repo_verify:
-    #  rev = _Verify(dst, branch, opt.quiet)
-    #else:
-    rev = 'refs/remotes/origin/%s^0' % branch
+    if can_verify and not opt.no_repo_verify:
+      rev = _Verify(dst, branch, opt.quiet)
+    else:
+      rev = 'refs/remotes/origin/%s^0' % branch
 
     _Checkout(dst, branch, rev, opt.quiet)
   except CloneFailure:
@@ -721,6 +721,7 @@ def _SetDefaultsTo(gitdir):
 
 
 def main(orig_args):
+  orig_args.append("--no-repo-verify")
   repo_main, rel_repo_dir = _FindRepo()
   cmd, opt, args = _ParseArguments(orig_args)
 
