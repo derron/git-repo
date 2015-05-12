@@ -721,7 +721,6 @@ def _SetDefaultsTo(gitdir):
 
 
 def main(orig_args):
-  orig_args.append("--no-repo-verify")
   repo_main, rel_repo_dir = _FindRepo()
   cmd, opt, args = _ParseArguments(orig_args)
 
@@ -746,7 +745,8 @@ def main(orig_args):
       repo_main, rel_repo_dir = _FindRepo()
     else:
       _NoCommands(cmd)
-
+  if cmd == 'init' or cmd == 'sync' or cmd == 'selfupdate':
+    orig_args.append("--no-repo-verify")
   if my_main:
     repo_main = my_main
 
