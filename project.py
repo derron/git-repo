@@ -1225,6 +1225,7 @@ class Project(object):
         # Except if the head needs to be detached
         #
         if not syncbuf.detach_head:
+          self._CopyAndLinkFiles()
           return
       else:
         lost = self._revlist(not_rev(revid), HEAD)
@@ -1242,6 +1243,7 @@ class Project(object):
     if head == revid:
       # No changes; don't do anything further.
       #
+      self._CopyAndLinkFiles()
       return
 
     branch = self.GetBranch(branch)
@@ -1274,6 +1276,7 @@ class Project(object):
           syncbuf.fail(self,
                        "branch %s is published (but not merged) and is now %d commits behind"
                        % (branch.name, len(upstream_gain)))
+        self._CopyAndLinkFiles()
         return
       elif pub == head:
         # All published commits are merged, and thus we are a
@@ -1295,6 +1298,7 @@ class Project(object):
         cnt_mine += 1
 
     if not upstream_gain and cnt_mine == len(local_changes):
+      self._CopyAndLinkFiles()
       return
 
     if self.IsDirty(consider_untracked=False):
