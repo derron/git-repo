@@ -727,6 +727,10 @@ def main(orig_args):
   wrapper_path = os.path.abspath(__file__)
   my_main, my_git = _RunSelf(wrapper_path)
 
+  if cmd == 'init' or cmd == 'sync' or cmd == 'selfupdate':
+    orig_args.append("--no-repo-verify")
+    args.append("--no-repo-verify")
+
   if not repo_main:
     if opt.help:
       _Usage()
@@ -745,8 +749,7 @@ def main(orig_args):
       repo_main, rel_repo_dir = _FindRepo()
     else:
       _NoCommands(cmd)
-  if cmd == 'init' or cmd == 'sync' or cmd == 'selfupdate':
-    orig_args.append("--no-repo-verify")
+
   if my_main:
     repo_main = my_main
 
